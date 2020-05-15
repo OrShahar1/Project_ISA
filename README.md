@@ -5,4 +5,4 @@ Projects Repository
 
 #computer structure and organization project
 
-![](diagram.jpg)
+![](diagram.png)
