@@ -1,8 +1,5 @@
-# Projects
-Projects Repository
+# ISA Project
+#Computer Structure and Organization
 
-#ISA project 
-
-#computer structure and organization project
-
+#Diagram that explains the design int the project
 ![](diagram.png)
