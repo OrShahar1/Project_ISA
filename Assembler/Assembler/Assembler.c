@@ -29,6 +29,17 @@ void parse_labels(FILE* asm_prog);
 void parse_instructions(FILE* asm_prog);
 void write_to_memory(FILE* memin);
 
+void parse_line_into_args(char* line, char* line_args[]);
+int line_has_label(char* line);
+int get_opcode_from_line(char* line_arg);
+int get_PC_increment(opcode);
+int calc_command(int opcode, int rd, int rs, int rt, int imm);
+
+int get_reg_from_arg(char* arg);
+int get_imm_from_arg(char* arg);
+void lowercase(char* str);
+int str_to_int(char* str);
+
 Line Lines[MAX_LINES];
 int line_index = 0;
 Label Labels[MAX_LINES];
