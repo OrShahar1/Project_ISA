@@ -1,0 +1,19 @@
+﻿  Assembler.c
+c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\assembler.c(62): warning C4013: 'check' undefined; assuming extern returning int
+c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\assembler.c(71): warning C4013: 'strchr' undefined; assuming extern returning int
+c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\assembler.c(78): warning C4013: 'strcpy' undefined; assuming extern returning int
+c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\assembler.c(80): warning C4013: 'strtok' undefined; assuming extern returning int
+c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\assembler.c(86): warning C4047: '=': 'char *' differs in levels of indirection from 'int'
+c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\assembler.c(71): warning C4047: 'initializing': 'char *' differs in levels of indirection from 'int'
+c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\assembler.c(80): warning C4047: 'initializing': 'char *' differs in levels of indirection from 'int'
+c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\assembler.c(93): warning C4047: 'initializing': 'char *' differs in levels of indirection from 'int'
+c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\assembler.c(109): warning C4047: '=': 'char' differs in levels of indirection from 'void *'
+c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\assembler.c(106): warning C4047: 'initializing': 'char *' differs in levels of indirection from 'int'
+c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\assembler.c(121): warning C4013: 'strcmp' undefined; assuming extern returning int
+c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\assembler.c(140): warning C4101: 'label': unreferenced local variable
+c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\assembler.c(183): warning C4013: 'str_to_int' undefined; assuming extern returning int
+c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\assembler.c(190): warning C4013: 'get_reg_from_arg' undefined; assuming extern returning int
+c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\assembler.c(193): warning C4013: 'get_imm_from_arg' undefined; assuming extern returning int
+c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\assembler.c(195): warning C4013: 'calc_command' undefined; assuming extern returning int
+c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\assembler.c(243): warning C4013: 'tolower' undefined; assuming extern returning int
+  Assembler.vcxproj -> C:\Users\דניאל קינדרמן\source\repos\OrShahar1\Project_ISA\Assembler\Debug\Assembler.exe
