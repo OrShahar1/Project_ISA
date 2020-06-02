@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
 	fclose(asm_prog);
 	fclose(memin);
 
-	return check();
+	return 0;
 };
 
 void parse_line_into_args(char* line, char* line_args[]) {
