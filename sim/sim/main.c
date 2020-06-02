@@ -5,14 +5,14 @@
 
 #define MAX_MEM_ADDRS 4096
 #define NUM_OF_REGISTERS 16
-#define NUM_OF_IORegisters 18
+#define NUM_OF_IOREGISTERS 18
 #define DISK_SECTORS 128
 #define WORDS_IN_SECTOR 128 // 512 bytes/4=128 words
 #define OPCODE_MASK 0x000000FF
 #define REGISTER_MASK 0x0000000F
 #define BRANCH_MASK 0x00000FFF //8=1000 to keep the sign of imm
-
 #define NUM_OF_OPCODES 19
+#define CLOCK_LIMIT 0xffffffff
 
 typedef enum reg {
 	$zero = 0,
@@ -23,6 +23,12 @@ typedef enum opcode {
 	add = 0,
 	sub,and,or,sll,sra,srl,beq,bne,blt,bgt,ble,bge,jal,lw,sw,reti,in,out,halt
 }opcode;
+
+typedef enum IOreg {
+	irq0enable = 0,
+	irq1enable,irq2enable,irq0status,irq1status,irq2status,irqhandler,irqreturn,clks,leds,display,timerenable,
+	timercurrent,timermax,diskcmd,disksector,diskbuffer,diskstatus
+}IOreg;
 
 
 struct instruction {
@@ -37,7 +43,7 @@ struct CPU {
 	int PC;
 	struct instruction *inst;
 	int registers[NUM_OF_REGISTERS];
-	int IORegisters[NUM_OF_IORegisters];
+	int IORegisters[NUM_OF_IOREGISTERS];
 	unsigned int *memory;
 };
 
@@ -46,9 +52,10 @@ struct CPU * sim_init();
 void fetch_address(struct CPU *cpu);
 int signExtension(int instruction);
 unsigned int *parseMemin(char *memory_file);
-void memoryOut(unsigned int *memory, char *out_file);
+void fileOut(unsigned int *data, char *out_file, int start_index, int length);
 void parseDisk(unsigned int(*disk)[WORDS_IN_SECTOR], char *disk_file);
 void diskOut(unsigned int(*disk)[WORDS_IN_SECTOR], char *out_file);
+void cyclesOut(int cycles, char *out_file);
 
 void (*operation[NUM_OF_OPCODES]) (struct CPU *cpu);
 
@@ -76,10 +83,14 @@ void halt_op(struct CPU *cpu);
 
 void initializeOperators();
 void executeInstruction(struct CPU *cpu);
+void write_trace(struct CPU *cpu, FILE *trace_file_desc);
 
 
 int main(int argc, char** argv)
 {
+	const char *IOregisters_names[] = { "irq0enable",
+		"irq1enable","irq2enable","irq0status","irq1status","irq2status","irqhandler","irqreturn",
+		"clks","leds","display","timerenable","timercurrent","timermax","diskcmd","disksector","diskbuffer","diskstatus" };
 	//init cpu struct
 	struct CPU *cpu =sim_init();
 	//parse input files
@@ -94,16 +105,70 @@ int main(int argc, char** argv)
 	parseDisk(disk,argv[2]);
 	//unsigned int irq2_occurences=parseIrq2(argv[3]);
 
+	//open trace,leds,display files
+	FILE *trace_file_desc,*leds_file_desc,*display_file_desc,*hwreg_file_desc;
+	trace_file_desc = fopen(argv[6], "w");
+	assert(trace_file_desc != NULL);
+	hwreg_file_desc = fopen(argv[7], "w");
+	assert(hwreg_file_desc != NULL);
+	leds_file_desc = fopen(argv[9], "w");
+	assert(leds_file_desc != NULL);
+	display_file_desc = fopen(argv[9], "w");
+	assert(display_file_desc != NULL);
+
 	fetch_address(cpu);
-	while (cpu->inst->opcode != halt) //19
+	while (cpu->inst->opcode != halt) //halt=19
 	{
+		write_trace(cpu, trace_file_desc);
 		executeInstruction(cpu);
+
+		if (cpu->inst->opcode == out)
+		{
+			//write hwregtrace.txt
+			fprintf(hwreg_file_desc, "%d WRITE %s %08x\n", cpu->IORegisters[clks],
+				(IOregisters_names[cpu->inst->rs + cpu->inst->rt]), cpu->IORegisters[cpu->inst->rs + cpu->inst->rt]);
+
+			if (cpu->inst->rs + cpu->inst->rt == leds)
+			{
+				//write leds.txt
+				fprintf(leds_file_desc, "%d %08x\n", cpu->IORegisters[clks], cpu->IORegisters[leds]);
+			}
+			else if (cpu->inst->rs + cpu->inst->rt == display)
+			{
+				//write display.txt
+				fprintf(display_file_desc, "%d %08x\n", cpu->IORegisters[clks], cpu->IORegisters[display]);
+
+			}
+		}
+		else if (cpu->inst->opcode == in)
+		{
+			//write hwregtrace.txt
+			fprintf(hwreg_file_desc, "%d READ %s %08x\n", cpu->IORegisters[clks],
+				(IOregisters_names[cpu->inst->rs + cpu->inst->rt]), cpu->IORegisters[cpu->inst->rs + cpu->inst->rt]);
+		}
 		fetch_address(cpu);
 	}
-
-	memoryOut(cpu->memory, argv[4]);
+	write_trace(cpu, trace_file_desc); //for halt instruction
+	cyclesOut(cpu->IORegisters[clks], argv[8]);
+	fileOut(cpu->memory, argv[4],0, MAX_MEM_ADDRS); //memout
+	fileOut(cpu->memory, argv[5],2, NUM_OF_REGISTERS); //regout
 	diskOut(disk, argv[11]);
+	fclose(trace_file_desc);
+	fclose(leds_file_desc);
+	fclose(display_file_desc);
+	fclose(hwreg_file_desc);
+}
 
+
+void write_trace(struct CPU *cpu,FILE *trace_file_desc)
+{
+	int i;
+	fprintf(trace_file_desc, "%08X %08X ", cpu->PC, cpu->memory[cpu->PC]);
+	for (i = 0; i < NUM_OF_REGISTERS - 1; i++)
+	{
+		fprintf(trace_file_desc, "%08x ", cpu->registers[i]);
+	}
+	fprintf(trace_file_desc, "%08x\n", cpu->registers[NUM_OF_REGISTERS - 1]); //last element no whitespace
 }
 
 
@@ -127,17 +192,17 @@ unsigned int *parseMemin(char *memory_file)
 	return memory;
 }
 
-void memoryOut(unsigned int *memory, char *out_file)
+void fileOut(unsigned int *data, char *out_file,int start_index,int length)
 {
-	FILE *memout_file_desc;
-	memout_file_desc = fopen(out_file, "w");
-	assert(memout_file_desc != NULL);
+	FILE *file_desc;
+	file_desc = fopen(out_file, "w");
+	assert(file_desc != NULL);
 	int i;
-	for (i = 0; i < MAX_MEM_ADDRS; i++)
+	for (i = start_index; i < length; i++)
 	{
-		fprintf(memout_file_desc, "%X\n", memory[i]);	//is it ok if diskout is empty to return 0x000000 for all addrs?												
+		fprintf(file_desc, "%08X\n", data[i]);	//is it ok if diskout is empty to return 0x000000 for all addrs?												
 	}
-	fclose(memout_file_desc);
+	fclose(file_desc);
 }
 
 
@@ -181,7 +246,17 @@ struct CPU * sim_init()
 	cpu->inst = (struct instruction*)malloc(sizeof(struct instruction));
 	cpu->PC = 0;
 	initializeOperators();
-	cpu->registers[$zero] = 0;
+	int i;
+	//intalizing all Registers to 0. not written in project instructions. but it is like that in your example trace.txt..
+	for (i = 0; i < NUM_OF_REGISTERS; i++)
+	{
+		cpu->registers[i] = 0;
+	}
+	//intializing all IORegisters to 0
+	for (i = 0; i < NUM_OF_IOREGISTERS; i++)
+	{
+		cpu->IORegisters[i] = 0;
+	}
 	return cpu;
 }
 
@@ -301,6 +376,10 @@ void beq_op(struct CPU *cpu)
 	{
 		cpu->PC = cpu->registers[cpu->inst->rd] & BRANCH_MASK;
 	}
+	else
+	{
+		cpu->PC += 1;
+	}
 }
 
 void bne_op(struct CPU *cpu)
@@ -308,6 +387,10 @@ void bne_op(struct CPU *cpu)
 	if (cpu->registers[cpu->inst->rs] != cpu->registers[cpu->inst->rt])
 	{
 		cpu->PC = cpu->registers[cpu->inst->rd] & BRANCH_MASK;
+	}
+	else
+	{
+		cpu->PC += 1;
 	}
 }
 
@@ -317,6 +400,10 @@ void blt_op(struct CPU *cpu)
 	{
 		cpu->PC = cpu->registers[cpu->inst->rd] & BRANCH_MASK;
 	}
+	else
+	{
+		cpu->PC += 1;
+	}
 }
 
 void bgt_op(struct CPU *cpu)
@@ -324,6 +411,10 @@ void bgt_op(struct CPU *cpu)
 	if (cpu->registers[cpu->inst->rs] > cpu->registers[cpu->inst->rt])
 	{
 		cpu->PC = cpu->registers[cpu->inst->rd] & BRANCH_MASK;
+	}
+	else
+	{
+		cpu->PC += 1;
 	}
 }
 
@@ -333,6 +424,10 @@ void ble_op(struct CPU *cpu)
 	{
 		cpu->PC = cpu->registers[cpu->inst->rd] & BRANCH_MASK;
 	}
+	else
+	{
+		cpu->PC += 1;
+	}
 }
 
 void bge_op(struct CPU *cpu)
@@ -340,6 +435,10 @@ void bge_op(struct CPU *cpu)
 	if (cpu->registers[cpu->inst->rs] >= cpu->registers[cpu->inst->rt])
 	{
 		cpu->PC = cpu->registers[cpu->inst->rd] & BRANCH_MASK; //address mask
+	}
+	else
+	{
+		cpu->PC += 1;
 	}
 }
 
@@ -363,7 +462,7 @@ void sw_op(struct CPU *cpu)
 
 void reti_op(struct CPU *cpu)
 {
-	cpu->PC = cpu->IORegisters[cpu->registers[cpu->inst->rs] + cpu->registers[cpu->inst->rt]];
+	cpu->PC = cpu->IORegisters[irqreturn];
 }
 
 
@@ -411,5 +510,48 @@ void initializeOperators()	//intializing an array of pointers to functions
 
 void executeInstruction(struct CPU *cpu)
 {
-	(*operation[cpu->inst->opcode]) (cpu);
+	int irq = (cpu->IORegisters[irq0enable] && cpu->IORegisters[irq0status]) ||
+		(cpu->IORegisters[irq1enable] && cpu->IORegisters[irq1status]) ||
+		(cpu->IORegisters[irq2enable] && cpu->IORegisters[irq2status]);
+	if (irq == 1)
+	{
+		//if we are not dealing with the irq yet{
+		cpu->IORegisters[irqreturn] = cpu->PC;
+		cpu->PC = cpu->IORegisters[irqhandler];
+		//}
+
+	}
+	else
+	{
+		(*operation[cpu->inst->opcode]) (cpu);
+	}
+	if (cpu->IORegisters[timerenable] == 1)
+	{
+		if (cpu->IORegisters[timercurrent] != cpu->IORegisters[timermax])
+		{
+			cpu->IORegisters[timercurrent] += 1;
+		}
+		else
+		{
+			cpu->IORegisters[irq0status] = 1;
+			cpu->IORegisters[timercurrent] = 0;
+		}
+	}
+	if (cpu->IORegisters[clks] == CLOCK_LIMIT)
+	{
+		cpu->IORegisters[clks] = 0;
+	}
+	else
+	{
+		cpu->IORegisters[clks] += 1;
+	}
+}
+
+void cyclesOut(int cycles, char *out_file)
+{
+	FILE *cycles_file_desc;
+	cycles_file_desc = fopen(out_file, "w");
+	assert(cycles_file_desc != NULL);
+	fprintf(cycles_file_desc, "%d\n", cycles);
+	fclose(cycles_file_desc);
 }
