@@ -6,7 +6,7 @@
 #define MAX_LABEL_LEN 51 //The maximal label length + '\0' charachter
 #define MAX_LINE_LEN 501 //The maximal line length + '\0' charachter
 #define MAX_ARGS_IN_LINE 6 //Line can have up to 5 args + label
-
+#define STATUS_CODE_SUCCESS 1
 #define OPCODES {"add", "sub", "and", "or", "sll", "sra", "srl", "beq", "bne", "blt", "bgt", "ble", "bge", "jal", "lw", "sw", "reti", "in", "out", "halt", ".word"}
 #define NUM_OF_OPCODES 21
 
@@ -21,8 +21,7 @@ typedef struct label {
 typedef struct line {
 	Label label;
 	char* args[MAX_ARGS_IN_LINE];
-
-	int line_has_label;
+	int line_has_label;		   //change to bool include <stdbool.h>
 } Line;
 
 void parse_labels(FILE* asm_prog);
@@ -38,7 +37,7 @@ int calc_command(int opcode, int rd, int rs, int rt, int imm);
 int get_reg_from_arg(char* arg);
 int get_imm_from_arg(char* arg);
 void lowercase(char* str);
-int str_to_int(char* str);
+int str_to_int(char* str);	 // include <ctype.h> atoi function
 
 Line Lines[MAX_LINES];
 int line_index = 0;
@@ -70,11 +69,11 @@ int main(int argc, char** argv) {
 	fclose(asm_prog);
 	fclose(memin);
 
-	return 0;
+	return STATUS_CODE_SUCCESS;
 };
 
 void parse_line_into_args(char* line, char* line_args[]) {
-	
+
 	for (int i = 0; i < MAX_ARGS_IN_LINE; i++) {
 		line_args[i] = NULL;
 	};
@@ -98,12 +97,12 @@ void parse_line_into_args(char* line, char* line_args[]) {
 	};
 };
 
-int line_has_label(char* line) {
+int line_has_label(char* line) {    //bool
 	char line_cpy[MAX_LINE_LEN];
-	strcpy(line_cpy, line);
+	strcpy(line_cpy, line);					   //no need to copy
 	char* colon_index = strchr(line_cpy, ':');
 
-	if (colon_index == NULL) {
+	if (colon_index == NULL) { //return colon_index!=NULL saves you 4 lines...
 		return 0;
 	}
 	else {
@@ -113,7 +112,7 @@ int line_has_label(char* line) {
 
 void get_label_from_line(char* line, char* label) {
 	char line_cpy[MAX_LINE_LEN];
-	strcpy(line_cpy, line);
+	strcpy(line_cpy, line);		  //no need to copy
 	char* colon_index = strchr(line_cpy, ':');
 
 	if (colon_index == NULL) {
@@ -125,7 +124,7 @@ void get_label_from_line(char* line, char* label) {
 	};
 };
 
-int get_opcode_from_line(char* line_arg) {
+int get_opcode_from_line(char* line_arg) {	   // maybe use enum instead
 	if (line_arg == NULL) return -1;
 	char* opcodes[NUM_OF_OPCODES] = OPCODES;
 	for (int i = 0; i < NUM_OF_OPCODES; i++) {
@@ -141,6 +140,7 @@ int get_PC_increment(opcode) {
 	if (opcode <= 7) return 1; //add,sub,and,or,all,sra,srl
 	if (opcode <= 18) return 1; //beq,bne,blt,bgt,ble,bge,jal,lw,sw,reti,in,out
 	if (opcode == 19) return 1; //halt
+	//you have 3 if statements that returns the same. decrease to 1 if statement 
 	if (opcode == 20) return 0; //.word
 	return -1;
 };
@@ -151,7 +151,7 @@ void parse_labels(FILE* asm_prog) {
 	char label[MAX_LABEL_LEN];
 	int opcode;
 
-	
+
 	while (fgets(line, MAX_LINE_LEN, asm_prog) != NULL) {
 		parse_line_into_args(line, line_args);
 		int has_label = line_has_label(line);
@@ -162,7 +162,8 @@ void parse_labels(FILE* asm_prog) {
 			label_index++;
 			opcode = get_opcode_from_line(line_args[1]);
 			Lines[line_index].line_has_label = 1;
-		} else {
+		}
+		else {
 			opcode = get_opcode_from_line(line_args[0]);
 			Lines[line_index].line_has_label = 0;
 		};
@@ -189,19 +190,19 @@ void parse_instructions(FILE* asm_prog) {
 		};
 		if (line_args[opcode_index] == NULL) continue;
 		opcode = get_opcode_from_line(line_args[opcode_index]);
-		
-		if (opcode == 20) {
+
+		if (opcode == 20) { //magic number
 			int address = str_to_int(line_args[opcode_index + 1]);
-			int data = str_to_int(line_args[opcode_index + 2]);
+			int data = str_to_int(line_args[opcode_index + 2]);	 //magic number
 			Memory[address] = data;
 			printf("%08x\n", Memory[address]);
 			continue;
 		};
 
-		rd  = get_reg_from_arg(line_args[opcode_index + 1]);
-		rs  = get_reg_from_arg(line_args[opcode_index + 2]);
-		rt  = get_reg_from_arg(line_args[opcode_index + 3]);
-		imm = get_imm_from_arg(line_args[opcode_index + 4]);
+		rd = get_reg_from_arg(line_args[opcode_index + 1]);
+		rs = get_reg_from_arg(line_args[opcode_index + 2]);	//magic number
+		rt = get_reg_from_arg(line_args[opcode_index + 3]);			//magic number
+		imm = get_imm_from_arg(line_args[opcode_index + 4]);				//magic number
 
 		int command = calc_command(opcode, rd, rs, rt, imm);
 		Memory[mem_index] = command;
@@ -218,16 +219,16 @@ void write_to_memory(FILE* memin) {
 
 int calc_command(int opcode, int rd, int rs, int rt, int imm) {
 	int command = 0;
-	command += (opcode << 24);
-	command += (rd << 20);
-	command += (rs << 16);
-	command += (rt << 12);
-	command += (imm&0x00000fff);
+	command += (opcode << 24);	//enum
+	command += (rd << 20);			  //enum
+	command += (rs << 16);					//enum
+	command += (rt << 12);						  //enum
+	command += (imm & 0x00000fff);
 
 	return command;
 };
 
-int get_reg_from_arg(char* arg) {
+int get_reg_from_arg(char* arg) {	   //you have 2 functions with same purpose. code duplication
 	char* regs[NUM_OF_REGS] = REGS;
 
 	for (int i = 0; i < NUM_OF_REGS; i++) {
@@ -246,16 +247,16 @@ int get_imm_from_arg(char* arg) {
 			return Labels[i].addr;
 		};
 	};
-	return str_to_int(arg);
+	return str_to_int(arg);		//atoi
 };
 
-void lowercase(char* str) {
+void lowercase(char* str) {	//function name not clear
 	for (int i = 0; str[i]; i++) {
 		str[i] = tolower(str[i]);
 	};
 };
 
-int str_to_int(char* str) {
+int str_to_int(char* str) {		//delete function. atoi
 	if (str[0] == '0' && (str[1] == 'x' || str[1] == 'X')) {
 		lowercase(str);
 		return strtol(str, NULL, 0);
