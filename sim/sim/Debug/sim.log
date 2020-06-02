@@ -1,0 +1,5 @@
+﻿  main.c
+c:\users\or\documents\studies\tau\term2\computer_organization\project\project_isa\sim\sim\main.c(56): warning C4047: 'initializing': 'unsigned int **' differs in levels of indirection from 'unsigned int (*)[128]'
+c:\users\or\documents\studies\tau\term2\computer_organization\project\project_isa\sim\sim\main.c(134): warning C4028: formal parameter 1 different from declaration
+  sim.vcxproj -> C:\Users\Or\Documents\Studies\TAU\Term2\Computer_Organization\project\Project_ISA\sim\Debug\sim.exe
+  sim.vcxproj -> C:\Users\Or\Documents\Studies\TAU\Term2\Computer_Organization\project\Project_ISA\sim\Debug\sim.pdb (Partial PDB)
