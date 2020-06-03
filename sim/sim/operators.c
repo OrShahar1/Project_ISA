@@ -1,0 +1,208 @@
+#include "operations.h"
+
+#include <stdbool.h>
+
+#define BRANCH_MASK 0x00000FFF //12 rightmost bit mask for branch operations, represent the memory space
+
+void add_op(struct CPU *cpu)
+{
+	if (cpu->inst->rd == $zero || cpu->inst->rd == $imm)
+	{
+		cpu->PC += 1;
+		return;
+	}
+	cpu->registers[cpu->inst->rd] = cpu->registers[cpu->inst->rs] + cpu->registers[cpu->inst->rt];
+	cpu->PC += 1;
+}
+
+
+void sub_op(struct CPU *cpu)
+{
+	if (cpu->inst->rd == $zero || cpu->inst->rd == $imm)
+	{
+		cpu->PC += 1;
+		return;
+	}
+	cpu->registers[cpu->inst->rd] = cpu->registers[cpu->inst->rs] - cpu->registers[cpu->inst->rt];
+	cpu->PC += 1;
+}
+
+void and_op(struct CPU *cpu)
+{
+	if (cpu->inst->rd == $zero || cpu->inst->rd == $imm)
+	{
+		cpu->PC += 1;
+		return;
+	}
+	cpu->registers[cpu->inst->rd] = cpu->registers[cpu->inst->rs] & cpu->registers[cpu->inst->rt];
+	cpu->PC += 1;
+}
+
+void or_op(struct CPU *cpu)
+{
+	if (cpu->inst->rd == $zero || cpu->inst->rd == $imm)
+	{
+		cpu->PC += 1;
+		return;
+	}
+	cpu->registers[cpu->inst->rd] = cpu->registers[cpu->inst->rs] | cpu->registers[cpu->inst->rt];
+	cpu->PC += 1;
+}
+
+void sll_op(struct CPU *cpu)
+{
+	if (cpu->inst->rd == $zero || cpu->inst->rd == $imm)
+	{
+		cpu->PC += 1;
+		return;
+	}
+	cpu->registers[cpu->inst->rd] = cpu->registers[cpu->inst->rs] << cpu->registers[cpu->inst->rt];
+	cpu->PC += 1;
+}
+
+
+void sra_op(struct CPU *cpu)
+{
+	if (cpu->inst->rd == $zero || cpu->inst->rd == $imm)
+	{
+		cpu->PC += 1;
+		return;
+	}
+	//arithmetic shift with sign extension
+	if (cpu->registers[cpu->inst->rs] < 0 && cpu->registers[cpu->inst->rt] > 0)
+	{
+		cpu->registers[cpu->inst->rd] = cpu->registers[cpu->inst->rs] >> cpu->registers[cpu->inst->rt] | ~(~0U >> cpu->registers[cpu->inst->rt]);
+	}
+	else
+	{
+		cpu->registers[cpu->inst->rd] = cpu->registers[cpu->inst->rs] >> cpu->registers[cpu->inst->rt];
+
+	}
+	cpu->PC += 1;
+}
+
+void srl_op(struct CPU *cpu)
+{
+	if (cpu->inst->rd == $zero || cpu->inst->rd == $imm)
+	{
+		cpu->PC += 1;
+		return;
+	}
+	//logical shift with sign extension
+	cpu->registers[cpu->inst->rd] = (unsigned)(cpu->registers[cpu->inst->rs]) >> cpu->registers[cpu->inst->rt];
+	cpu->PC += 1;
+}
+
+void beq_op(struct CPU *cpu)
+{
+	if (cpu->registers[cpu->inst->rs] == cpu->registers[cpu->inst->rt])
+	{
+		cpu->PC = cpu->registers[cpu->inst->rd] & BRANCH_MASK;
+	}
+	else
+	{
+		cpu->PC += 1;
+	}
+}
+
+void bne_op(struct CPU *cpu)
+{
+	if (cpu->registers[cpu->inst->rs] != cpu->registers[cpu->inst->rt])
+	{
+		cpu->PC = cpu->registers[cpu->inst->rd] & BRANCH_MASK;
+	}
+	else
+	{
+		cpu->PC += 1;
+	}
+}
+
+void blt_op(struct CPU *cpu)
+{
+	if (cpu->registers[cpu->inst->rs] < cpu->registers[cpu->inst->rt])
+	{
+		cpu->PC = cpu->registers[cpu->inst->rd] & BRANCH_MASK;
+	}
+	else
+	{
+		cpu->PC += 1;
+	}
+}
+
+void bgt_op(struct CPU *cpu)
+{
+	if (cpu->registers[cpu->inst->rs] > cpu->registers[cpu->inst->rt])
+	{
+		cpu->PC = cpu->registers[cpu->inst->rd] & BRANCH_MASK;
+	}
+	else
+	{
+		cpu->PC += 1;
+	}
+}
+
+void ble_op(struct CPU *cpu)
+{
+	if (cpu->registers[cpu->inst->rs] <= cpu->registers[cpu->inst->rt])
+	{
+		cpu->PC = cpu->registers[cpu->inst->rd] & BRANCH_MASK;
+	}
+	else
+	{
+		cpu->PC += 1;
+	}
+}
+
+void bge_op(struct CPU *cpu)
+{
+	if (cpu->registers[cpu->inst->rs] >= cpu->registers[cpu->inst->rt])
+	{
+		cpu->PC = cpu->registers[cpu->inst->rd] & BRANCH_MASK;
+	}
+	else
+	{
+		cpu->PC += 1;
+	}
+}
+
+void jal_op(struct CPU *cpu)
+{
+	cpu->registers[$ra] = cpu->PC + 1;
+	cpu->PC = cpu->registers[cpu->inst->rd] & BRANCH_MASK;
+}
+
+void lw_op(struct CPU *cpu)
+{
+	cpu->registers[cpu->inst->rd] = cpu->memory[cpu->registers[cpu->inst->rs] + cpu->registers[cpu->inst->rt]];
+	cpu->PC += 1;
+}
+
+void sw_op(struct CPU *cpu)
+{
+	cpu->memory[cpu->registers[cpu->inst->rs] + cpu->registers[cpu->inst->rt]] = cpu->registers[cpu->inst->rd];
+	cpu->PC += 1;
+}
+
+void reti_op(struct CPU *cpu)
+{
+	cpu->PC = cpu->IORegisters[irqreturn];
+	cpu->is_in_irq = false; //to let the cpu know we returned from interrupt
+}
+
+
+void in_op(struct CPU *cpu)
+{
+	cpu->registers[cpu->inst->rd] = cpu->IORegisters[cpu->registers[cpu->inst->rs] + cpu->registers[cpu->inst->rt]];
+	cpu->PC += 1;
+}
+
+void out_op(struct CPU *cpu)
+{
+	cpu->IORegisters[cpu->registers[cpu->inst->rs] + cpu->registers[cpu->inst->rt]] = cpu->registers[cpu->inst->rd];
+	cpu->PC += 1;
+}
+
+void halt_op(struct CPU *cpu)
+{
+	return; //no action
+}
