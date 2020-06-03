@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdbool.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,6 +14,8 @@
 #define BRANCH_MASK 0x00000FFF //8=1000 to keep the sign of imm
 #define NUM_OF_OPCODES 19
 #define CLOCK_LIMIT 0xffffffff
+
+#define MAX_IRQ2_LENGTH 100 //TODO
 
 typedef enum reg {
 	$zero = 0,
@@ -45,8 +48,13 @@ struct CPU {
 	int registers[NUM_OF_REGISTERS];
 	int IORegisters[NUM_OF_IOREGISTERS];
 	unsigned int *memory;
+	bool is_in_irq;
 };
 
+struct irq2_occurences {
+	unsigned int values[MAX_IRQ2_LENGTH]; //check maximal length
+	int length;
+};
 
 struct CPU * sim_init();
 void fetch_address(struct CPU *cpu);
@@ -56,6 +64,7 @@ void fileOut(unsigned int *data, char *out_file, int start_index, int length);
 void parseDisk(unsigned int(*disk)[WORDS_IN_SECTOR], char *disk_file);
 void diskOut(unsigned int(*disk)[WORDS_IN_SECTOR], char *out_file);
 void cyclesOut(int cycles, char *out_file);
+struct irq2_occurences *parseIrq2(char * irq2_file);
 
 void (*operation[NUM_OF_OPCODES]) (struct CPU *cpu);
 
@@ -96,14 +105,14 @@ int main(int argc, char** argv)
 	//parse input files
 	cpu->memory = parseMemin(argv[1]);
 	unsigned int(*disk)[WORDS_IN_SECTOR]= (unsigned int(*)[WORDS_IN_SECTOR])malloc(sizeof(*disk)*DISK_SECTORS);
-	int i;
 	//initiliaze each sector to 0
+	int i;
 	for (i = 0; i < DISK_SECTORS; i++)
 	{
 		memset(&disk[i], 0x00000000, WORDS_IN_SECTOR * sizeof(unsigned int));
 	}
 	parseDisk(disk,argv[2]);
-	//unsigned int irq2_occurences=parseIrq2(argv[3]);
+	struct irq2_occurences *irq2_occurences=parseIrq2(argv[3]);
 
 	//open trace,leds,display files
 	FILE *trace_file_desc,*leds_file_desc,*display_file_desc,*hwreg_file_desc;
@@ -115,11 +124,31 @@ int main(int argc, char** argv)
 	assert(leds_file_desc != NULL);
 	display_file_desc = fopen(argv[9], "w");
 	assert(display_file_desc != NULL);
+	i = 0;
 
-	fetch_address(cpu);
-	while (cpu->inst->opcode != halt) //halt=19
+	while (cpu->inst->opcode != halt) //halt=19;	true for first time initalized opcode to 0 from sim_init
 	{
+		//handle all interrupts
+		int irq = (cpu->IORegisters[irq0enable] && cpu->IORegisters[irq0status]) ||
+			(cpu->IORegisters[irq1enable] && cpu->IORegisters[irq1status]) ||
+			(cpu->IORegisters[irq2enable] && cpu->IORegisters[irq2status]);
+		if (irq == 1 && (!cpu->is_in_irq)) //there is no other irq at the moment
+		{
+			cpu->is_in_irq = true;
+			cpu->IORegisters[irqreturn] = cpu->PC;
+			cpu->PC = cpu->IORegisters[irqhandler];
+		}
+		fetch_address(cpu); //fetch the correct PC instruction with/without iterrupt
 		write_trace(cpu, trace_file_desc);
+		//update irq2status according to irq2.txt
+		if (i < irq2_occurences->length) //this condition first to cover empty irq2.txt
+		{
+			if (irq2_occurences->values[i] == cpu->IORegisters[clks])
+			{
+				cpu->IORegisters[irq2status] = 1;
+				i++;
+			}
+		}
 		executeInstruction(cpu);
 
 		if (cpu->inst->opcode == out)
@@ -158,6 +187,23 @@ int main(int argc, char** argv)
 	fclose(display_file_desc);
 	fclose(hwreg_file_desc);
 }
+
+struct irq2_occurences *parseIrq2(char * irq2_file)
+{
+	struct irq2_occurences *irq2_occurences = (struct irq2_occurences *)malloc(sizeof(struct irq2_occurences));
+	irq2_occurences->length = 0;
+	FILE *irq2_file_desc;
+	irq2_file_desc = fopen(irq2_file, "r");
+	assert(irq2_file_desc != NULL);
+	while (fscanf(irq2_file_desc, "%u", &(irq2_occurences->values[irq2_occurences->length])) != EOF)
+	{
+		irq2_occurences->length += 1;
+	}
+	fclose(irq2_file_desc);
+	return irq2_occurences;
+}
+
+
 
 
 void write_trace(struct CPU *cpu,FILE *trace_file_desc)
@@ -257,6 +303,8 @@ struct CPU * sim_init()
 	{
 		cpu->IORegisters[i] = 0;
 	}
+	cpu->is_in_irq = false;
+	cpu->inst->opcode = 0; //so that we can enter while loop in main
 	return cpu;
 }
 
@@ -463,6 +511,7 @@ void sw_op(struct CPU *cpu)
 void reti_op(struct CPU *cpu)
 {
 	cpu->PC = cpu->IORegisters[irqreturn];
+	cpu->is_in_irq = false;
 }
 
 
@@ -510,21 +559,8 @@ void initializeOperators()	//intializing an array of pointers to functions
 
 void executeInstruction(struct CPU *cpu)
 {
-	int irq = (cpu->IORegisters[irq0enable] && cpu->IORegisters[irq0status]) ||
-		(cpu->IORegisters[irq1enable] && cpu->IORegisters[irq1status]) ||
-		(cpu->IORegisters[irq2enable] && cpu->IORegisters[irq2status]);
-	if (irq == 1)
-	{
-		//if we are not dealing with the irq yet{
-		cpu->IORegisters[irqreturn] = cpu->PC;
-		cpu->PC = cpu->IORegisters[irqhandler];
-		//}
+	(*operation[cpu->inst->opcode]) (cpu);	//execute instruction with/without irq
 
-	}
-	else
-	{
-		(*operation[cpu->inst->opcode]) (cpu);
-	}
 	if (cpu->IORegisters[timerenable] == 1)
 	{
 		if (cpu->IORegisters[timercurrent] != cpu->IORegisters[timermax])
