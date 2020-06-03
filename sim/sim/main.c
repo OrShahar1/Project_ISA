@@ -5,32 +5,32 @@
 #include <string.h>
 
 #define MAX_MEM_ADDRS 4096
-#define NUM_OF_REGISTERS 16
-#define NUM_OF_IOREGISTERS 18
 #define DISK_SECTORS 128
 #define WORDS_IN_SECTOR 128 // 512 bytes/4=128 words
 #define OPCODE_MASK 0x000000FF
 #define REGISTER_MASK 0x0000000F
 #define BRANCH_MASK 0x00000FFF //8=1000 to keep the sign of imm
-#define NUM_OF_OPCODES 19
 #define CLOCK_LIMIT 0xffffffff
-
+#define DISK_PROCESS_TIME 1024
 #define MAX_IRQ2_LENGTH 100 //TODO
 
 typedef enum reg {
 	$zero = 0,
-	$imm, $v0, $a0, $a1, $t0, $t1, $t2, $t3, $s0, $s1, $s2, $gp, $sp, $fp, $ra
+	$imm, $v0, $a0, $a1, $t0, $t1, $t2, $t3, $s0, $s1, $s2, $gp, $sp, $fp, $ra,
+	NUM_OF_REGISTERS
 }reg;
 
 typedef enum opcode {
 	add = 0,
-	sub,and,or,sll,sra,srl,beq,bne,blt,bgt,ble,bge,jal,lw,sw,reti,in,out,halt
+	sub,and,or,sll,sra,srl,beq,bne,blt,bgt,ble,bge,jal,lw,sw,reti,in,out,halt,
+	NUM_OF_OPCODES
 }opcode;
 
 typedef enum IOreg {
 	irq0enable = 0,
 	irq1enable,irq2enable,irq0status,irq1status,irq2status,irqhandler,irqreturn,clks,leds,display,timerenable,
-	timercurrent,timermax,diskcmd,disksector,diskbuffer,diskstatus
+	timercurrent,timermax,diskcmd,disksector,diskbuffer,diskstatus,
+	NUM_OF_IOREGISTERS
 }IOreg;
 
 
@@ -122,10 +122,10 @@ int main(int argc, char** argv)
 	assert(hwreg_file_desc != NULL);
 	leds_file_desc = fopen(argv[9], "w");
 	assert(leds_file_desc != NULL);
-	display_file_desc = fopen(argv[9], "w");
+	display_file_desc = fopen(argv[10], "w");
 	assert(display_file_desc != NULL);
 	i = 0;
-
+	unsigned int disk_process_counter=0;
 	while (cpu->inst->opcode != halt) //halt=19;	true for first time initalized opcode to 0 from sim_init
 	{
 		//handle all interrupts
@@ -140,6 +140,7 @@ int main(int argc, char** argv)
 		}
 		fetch_address(cpu); //fetch the correct PC instruction with/without iterrupt
 		write_trace(cpu, trace_file_desc);
+		
 		//update irq2status according to irq2.txt
 		if (i < irq2_occurences->length) //this condition first to cover empty irq2.txt
 		{
@@ -149,39 +150,74 @@ int main(int argc, char** argv)
 				i++;
 			}
 		}
-		executeInstruction(cpu);
-
 		if (cpu->inst->opcode == out)
 		{
 			//write hwregtrace.txt
 			fprintf(hwreg_file_desc, "%d WRITE %s %08x\n", cpu->IORegisters[clks],
-				(IOregisters_names[cpu->inst->rs + cpu->inst->rt]), cpu->IORegisters[cpu->inst->rs + cpu->inst->rt]);
-
-			if (cpu->inst->rs + cpu->inst->rt == leds)
-			{
-				//write leds.txt
-				fprintf(leds_file_desc, "%d %08x\n", cpu->IORegisters[clks], cpu->IORegisters[leds]);
+				IOregisters_names[cpu->registers[cpu->inst->rs] + cpu->registers[cpu->inst->rt]], cpu->registers[cpu->inst->rd]);
+			
+			//write leds.txt
+			if (cpu->registers[cpu->inst->rs] + cpu->registers[cpu->inst->rt] == leds &&(cpu->IORegisters[leds])!=cpu->registers[cpu->inst->rd])
+			{	//print leds only when there is MODIFICATION in leds
+				fprintf(leds_file_desc, "%d %08x\n", cpu->IORegisters[clks], cpu->registers[cpu->inst->rd]);
 			}
-			else if (cpu->inst->rs + cpu->inst->rt == display)
-			{
-				//write display.txt
-				fprintf(display_file_desc, "%d %08x\n", cpu->IORegisters[clks], cpu->IORegisters[display]);
-
+			//write display.txt
+			else if (cpu->registers[cpu->inst->rs] + cpu->registers[cpu->inst->rt] == display && (cpu->IORegisters[display]) != cpu->registers[cpu->inst->rd])
+			{  //print display only when there is MODIFICATION in display
+				fprintf(display_file_desc, "%d %08x\n", cpu->IORegisters[clks], cpu->registers[cpu->inst->rd]);
 			}
 		}
 		else if (cpu->inst->opcode == in)
 		{
 			//write hwregtrace.txt
 			fprintf(hwreg_file_desc, "%d READ %s %08x\n", cpu->IORegisters[clks],
-				(IOregisters_names[cpu->inst->rs + cpu->inst->rt]), cpu->IORegisters[cpu->inst->rs + cpu->inst->rt]);
+				IOregisters_names[cpu->registers[cpu->inst->rs] + cpu->registers[cpu->inst->rt]], cpu->IORegisters[cpu->registers[cpu->inst->rs]+ cpu->registers[cpu->inst->rt]]);
+		}
+		//execute opretion. NOTE: must be before handle disk
+		executeInstruction(cpu);
+		//handle disk
+		if (cpu->IORegisters[diskcmd] != 0 && cpu->IORegisters[diskstatus] ==0)
+		{
+			cpu->IORegisters[diskstatus] = 1; //busy disk
+			if (cpu->IORegisters[diskcmd] == 1) //READ sector
+			{
+				for (i = 0; i < WORDS_IN_SECTOR; i++)
+				{
+					cpu->memory[cpu->IORegisters[diskbuffer + i]] = disk[cpu->IORegisters[disksector]][i];
+
+				}
+			}
+			else //WRITE sector
+			{
+				for (i = 0; i < WORDS_IN_SECTOR; i++)
+				{
+					disk[cpu->IORegisters[disksector]][i] = cpu->memory[cpu->IORegisters[diskbuffer + i]];
+				}
+			}
+		}
+		if (cpu->IORegisters[diskstatus] == 1) //busy disk
+		{
+			if (disk_process_counter >= DISK_PROCESS_TIME)
+			{
+				//free disk and raise irq1
+				cpu->IORegisters[diskcmd] = 0;
+				cpu->IORegisters[diskstatus] = 0;
+				cpu->IORegisters[irq1status] = 1;
+				disk_process_counter = 0;
+			}
+			else  //still counting untill DISK_PROCESS_TIME cycles is reached
+			{
+				disk_process_counter += 1;
+			}
 		}
 		fetch_address(cpu);
 	}
 	write_trace(cpu, trace_file_desc); //for halt instruction
-	cyclesOut(cpu->IORegisters[clks], argv[8]);
+	executeInstruction(cpu); //for halt instruction
+	cyclesOut(cpu->IORegisters[clks], argv[8]); //cycles
 	fileOut(cpu->memory, argv[4],0, MAX_MEM_ADDRS); //memout
-	fileOut(cpu->memory, argv[5],2, NUM_OF_REGISTERS); //regout
-	diskOut(disk, argv[11]);
+	fileOut(cpu->registers, argv[5],2, NUM_OF_REGISTERS); //regout
+	diskOut(disk, argv[11]);  //diskout
 	fclose(trace_file_desc);
 	fclose(leds_file_desc);
 	fclose(display_file_desc);
@@ -559,13 +595,21 @@ void initializeOperators()	//intializing an array of pointers to functions
 
 void executeInstruction(struct CPU *cpu)
 {
-	(*operation[cpu->inst->opcode]) (cpu);	//execute instruction with/without irq
-
+	//handle timer
 	if (cpu->IORegisters[timerenable] == 1)
 	{
 		if (cpu->IORegisters[timercurrent] != cpu->IORegisters[timermax])
 		{
-			cpu->IORegisters[timercurrent] += 1;
+			if (cpu->IORegisters[timercurrent] == CLOCK_LIMIT)	//if timermax initialized after timecurrent>timemax
+			{
+				cpu->IORegisters[timercurrent] = 0;
+
+			}
+			else
+			{
+				cpu->IORegisters[timercurrent] += 1;
+
+			}
 		}
 		else
 		{
@@ -573,6 +617,16 @@ void executeInstruction(struct CPU *cpu)
 			cpu->IORegisters[timercurrent] = 0;
 		}
 	}
+	if (cpu->inst->opcode < NUM_OF_OPCODES)	 //handle undefined opcode (ignore and continue)
+	{
+		(*operation[cpu->inst->opcode]) (cpu);	//execute instruction with/without irq
+
+	}
+	else
+	{
+		cpu->PC += 1;
+	}
+	//handle clock
 	if (cpu->IORegisters[clks] == CLOCK_LIMIT)
 	{
 		cpu->IORegisters[clks] = 0;
