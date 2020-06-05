@@ -111,12 +111,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="cpu.c" />
+    <ClCompile Include="filesManager.c" />
     <ClCompile Include="main.c" />
+    <ClCompile Include="operators.c" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="diskin.txt" />
     <Text Include="irq2in.txt" />
     <Text Include="memin.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cpu.h" />
+    <ClInclude Include="filesManager.h" />
+    <ClInclude Include="operations.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

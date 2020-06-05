@@ -34,7 +34,7 @@ int main(int argc, char** argv)
 		}
 	}
 	parseDisk(disk,argv[2]);
-	struct irq2_occurences *irq2_occurences=parseIrq2(argv[3]);
+	struct irq2 *irq2= Irq2Init(argv[3]);
 
 	//open trace,leds,display files
 	FILE *trace_file_desc,*leds_file_desc,*display_file_desc,*hwreg_file_desc;
@@ -63,13 +63,16 @@ int main(int argc, char** argv)
 		fetch_address(cpu); //fetch the correct PC instruction with/without iterrupt
 		write_trace(cpu, trace_file_desc);
 		
-		//update irq2status according to irq2.txt
-		if (i < irq2_occurences->length) //this condition first to cover empty irq2.txt
+		//turn on irq2status according to irq2.txt
+		if (!irq2->is_file_read_completed)
 		{
-			if (irq2_occurences->values[i] == cpu->IORegisters[clks])
-			{
+			if (irq2->next_occurence == cpu->IORegisters[clks])
+			{		
 				cpu->IORegisters[irq2status] = 1;
-				i++;
+				if (fscanf(irq2->file_desc, "%u", &(irq2->next_occurence)) == EOF)
+				{
+					irq2->is_file_read_completed = true;
+				}
 			}
 		}
 		if (cpu->inst->opcode == out)
@@ -106,7 +109,7 @@ int main(int argc, char** argv)
 			{
 				for (i = 0; i < WORDS_IN_SECTOR; i++)
 				{
-					cpu->memory[cpu->IORegisters[diskbuffer] + i] = disk[cpu->IORegisters[disksector]][i];
+					cpu->memory[(cpu->IORegisters[diskbuffer] + i)% MAX_MEM_ADDRS] = disk[cpu->IORegisters[disksector]][i];
 
 				}
 			}
@@ -114,7 +117,7 @@ int main(int argc, char** argv)
 			{
 				for (i = 0; i < WORDS_IN_SECTOR; i++)
 				{
-					disk[cpu->IORegisters[disksector]][i] = cpu->memory[cpu->IORegisters[diskbuffer] + i];
+					disk[cpu->IORegisters[disksector]][i] = cpu->memory[(cpu->IORegisters[diskbuffer] + i)% MAX_MEM_ADDRS];
 				}
 			}
 		}
@@ -148,9 +151,10 @@ int main(int argc, char** argv)
 	fclose(leds_file_desc);
 	fclose(display_file_desc);
 	fclose(hwreg_file_desc);
+	fclose(irq2->file_desc);
 	//free all allocated memory in simulator
 	freeCPU(cpu);
-	free(irq2_occurences);
+	free(irq2);
 	for (i = 0; i < DISK_SECTORS; i++)
 	{
 		free(disk[i]);

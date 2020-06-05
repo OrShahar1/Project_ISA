@@ -1,4 +1,5 @@
 #include "filesManager.h"
+#include "cpu.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -83,17 +84,16 @@ void cyclesOut(int cycles, char *out_file)
 }
 
 
-struct irq2_occurences *parseIrq2(char * irq2_file)
+struct irq2 *Irq2Init(char * irq2_file)
 {
-	struct irq2_occurences *irq2_occurences = (struct irq2_occurences *)malloc(sizeof(struct irq2_occurences));
-	irq2_occurences->length = 0;
-	FILE *irq2_file_desc;
-	irq2_file_desc = fopen(irq2_file, "r");
-	assert(irq2_file_desc != NULL);
-	while (fscanf(irq2_file_desc, "%u", &(irq2_occurences->values[irq2_occurences->length])) != EOF)
+	struct irq2 *irq2  = (struct irq2 *)malloc(sizeof(struct irq2));
+	irq2->is_file_read_completed = false;
+	irq2->file_desc = fopen(irq2_file, "r");
+	assert(irq2->file_desc != NULL);
+
+	if (fscanf(irq2->file_desc, "%u", &(irq2->next_occurence)) == EOF)
 	{
-		irq2_occurences->length += 1;
+		irq2->is_file_read_completed = true;
 	}
-	fclose(irq2_file_desc);
-	return irq2_occurences;
+	return irq2;
 }

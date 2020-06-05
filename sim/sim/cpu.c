@@ -110,7 +110,7 @@ void executeInstruction(struct CPU *cpu)
 	}
 	else //undefined opcode	('ignore and continue')
 	{
-		cpu->PC += 1;
+		cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 	}
 	//handle clock
 	if (cpu->IORegisters[clks] == CLOCK_LIMIT)

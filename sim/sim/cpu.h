@@ -4,6 +4,7 @@
 #include "operations.h"
 #include <stdbool.h>
 
+#define MAX_MEM_ADDRS 4096
 
 typedef enum reg {
 	$zero = 0,
@@ -41,7 +42,7 @@ struct CPU {
 	bool is_in_irq;
 };
 
-//array of operation functions declartion
+//pointer to array of operation functions declartion
 void(*operation[NUM_OF_OPCODES]) (struct CPU *cpu);
 
 struct CPU * sim_init();

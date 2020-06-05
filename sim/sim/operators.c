@@ -8,11 +8,11 @@ void add_op(struct CPU *cpu)
 {
 	if (cpu->inst->rd == $zero || cpu->inst->rd == $imm)
 	{
-		cpu->PC += 1;
+		cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 		return;
 	}
 	cpu->registers[cpu->inst->rd] = cpu->registers[cpu->inst->rs] + cpu->registers[cpu->inst->rt];
-	cpu->PC += 1;
+	cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 }
 
 
@@ -20,44 +20,44 @@ void sub_op(struct CPU *cpu)
 {
 	if (cpu->inst->rd == $zero || cpu->inst->rd == $imm)
 	{
-		cpu->PC += 1;
+		cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 		return;
 	}
 	cpu->registers[cpu->inst->rd] = cpu->registers[cpu->inst->rs] - cpu->registers[cpu->inst->rt];
-	cpu->PC += 1;
+	cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 }
 
 void and_op(struct CPU *cpu)
 {
 	if (cpu->inst->rd == $zero || cpu->inst->rd == $imm)
 	{
-		cpu->PC += 1;
+		cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 		return;
 	}
 	cpu->registers[cpu->inst->rd] = cpu->registers[cpu->inst->rs] & cpu->registers[cpu->inst->rt];
-	cpu->PC += 1;
+	cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 }
 
 void or_op(struct CPU *cpu)
 {
 	if (cpu->inst->rd == $zero || cpu->inst->rd == $imm)
 	{
-		cpu->PC += 1;
+		cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 		return;
 	}
 	cpu->registers[cpu->inst->rd] = cpu->registers[cpu->inst->rs] | cpu->registers[cpu->inst->rt];
-	cpu->PC += 1;
+	cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 }
 
 void sll_op(struct CPU *cpu)
 {
 	if (cpu->inst->rd == $zero || cpu->inst->rd == $imm)
 	{
-		cpu->PC += 1;
+		cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 		return;
 	}
 	cpu->registers[cpu->inst->rd] = cpu->registers[cpu->inst->rs] << cpu->registers[cpu->inst->rt];
-	cpu->PC += 1;
+	cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 }
 
 
@@ -65,7 +65,7 @@ void sra_op(struct CPU *cpu)
 {
 	if (cpu->inst->rd == $zero || cpu->inst->rd == $imm)
 	{
-		cpu->PC += 1;
+		cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 		return;
 	}
 	//arithmetic shift with sign extension
@@ -78,19 +78,19 @@ void sra_op(struct CPU *cpu)
 		cpu->registers[cpu->inst->rd] = cpu->registers[cpu->inst->rs] >> cpu->registers[cpu->inst->rt];
 
 	}
-	cpu->PC += 1;
+	cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 }
 
 void srl_op(struct CPU *cpu)
 {
 	if (cpu->inst->rd == $zero || cpu->inst->rd == $imm)
 	{
-		cpu->PC += 1;
+		cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 		return;
 	}
 	//logical shift with sign extension
 	cpu->registers[cpu->inst->rd] = (unsigned)(cpu->registers[cpu->inst->rs]) >> cpu->registers[cpu->inst->rt];
-	cpu->PC += 1;
+	cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 }
 
 void beq_op(struct CPU *cpu)
@@ -101,7 +101,7 @@ void beq_op(struct CPU *cpu)
 	}
 	else
 	{
-		cpu->PC += 1;
+		cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 	}
 }
 
@@ -113,7 +113,7 @@ void bne_op(struct CPU *cpu)
 	}
 	else
 	{
-		cpu->PC += 1;
+		cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 	}
 }
 
@@ -125,7 +125,7 @@ void blt_op(struct CPU *cpu)
 	}
 	else
 	{
-		cpu->PC += 1;
+		cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 	}
 }
 
@@ -137,7 +137,7 @@ void bgt_op(struct CPU *cpu)
 	}
 	else
 	{
-		cpu->PC += 1;
+		cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 	}
 }
 
@@ -149,7 +149,7 @@ void ble_op(struct CPU *cpu)
 	}
 	else
 	{
-		cpu->PC += 1;
+		cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 	}
 }
 
@@ -161,7 +161,7 @@ void bge_op(struct CPU *cpu)
 	}
 	else
 	{
-		cpu->PC += 1;
+		cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 	}
 }
 
@@ -174,13 +174,13 @@ void jal_op(struct CPU *cpu)
 void lw_op(struct CPU *cpu)
 {
 	cpu->registers[cpu->inst->rd] = cpu->memory[cpu->registers[cpu->inst->rs] + cpu->registers[cpu->inst->rt]];
-	cpu->PC += 1;
+	cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 }
 
 void sw_op(struct CPU *cpu)
 {
 	cpu->memory[cpu->registers[cpu->inst->rs] + cpu->registers[cpu->inst->rt]] = cpu->registers[cpu->inst->rd];
-	cpu->PC += 1;
+	cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 }
 
 void reti_op(struct CPU *cpu)
@@ -193,13 +193,13 @@ void reti_op(struct CPU *cpu)
 void in_op(struct CPU *cpu)
 {
 	cpu->registers[cpu->inst->rd] = cpu->IORegisters[cpu->registers[cpu->inst->rs] + cpu->registers[cpu->inst->rt]];
-	cpu->PC += 1;
+	cpu->PC = (cpu->PC+ 1)% MAX_MEM_ADDRS;
 }
 
 void out_op(struct CPU *cpu)
 {
 	cpu->IORegisters[cpu->registers[cpu->inst->rs] + cpu->registers[cpu->inst->rt]] = cpu->registers[cpu->inst->rd];
-	cpu->PC += 1;
+	cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 }
 
 void halt_op(struct CPU *cpu)
