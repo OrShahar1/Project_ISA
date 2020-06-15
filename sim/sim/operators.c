@@ -71,9 +71,17 @@ void sra_op(struct CPU *cpu)
 	//arithmetic shift with sign extension
 	if (cpu->registers[cpu->inst->rs] < 0 && cpu->registers[cpu->inst->rt] > 0)
 	{
-		cpu->registers[cpu->inst->rd] = cpu->registers[cpu->inst->rs] >> cpu->registers[cpu->inst->rt] | ~(~0U >> cpu->registers[cpu->inst->rt]);
+		int msb_mask = 1 << (31 - cpu->registers[cpu->inst->rt]);
+		int result = (cpu->registers[cpu->inst->rs] & 0x7FFFFFFF) >> cpu->registers[cpu->inst->rt];
+		int i,mask=0;
+		for (i = 0; i < cpu->registers[cpu->inst->rt]; i++)
+		{
+			mask=mask| (1 << (31 - i));
+		}
+		result = (result | msb_mask)|mask;
+		cpu->registers[cpu->inst->rd] = result;
 	}
-	else
+	else  //positive number, same operator as srl
 	{
 		cpu->registers[cpu->inst->rd] = cpu->registers[cpu->inst->rs] >> cpu->registers[cpu->inst->rt];
 
@@ -88,7 +96,7 @@ void srl_op(struct CPU *cpu)
 		cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 		return;
 	}
-	//logical shift with sign extension
+	//logical shift
 	cpu->registers[cpu->inst->rd] = (unsigned)(cpu->registers[cpu->inst->rs]) >> cpu->registers[cpu->inst->rt];
 	cpu->PC = (cpu->PC + 1) % MAX_MEM_ADDRS;
 }
