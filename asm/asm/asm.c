@@ -1,8 +1,9 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
+#include <ctype.h>
 
 #define MAX_LINES 4096	 //Number of lines in a program is limited by the num of addresses we can have
 #define MAX_LABEL_LEN 51 //The maximal label length + '\0' charachter
@@ -79,7 +80,7 @@ void parse_line_into_args(char* line, char* line_args[]) {
 		*comment_index = '\0'; //cutting off the comment part of the line
 	};
 
-	char* line_cpy[MAX_LINE_LEN];
+	char line_cpy[MAX_LINE_LEN];
 	strcpy(line_cpy, line); //we want line variable to remain the same so it can indicate if there's a label in the line
 	const char* delimiters = ":, \t\n";
 	char* arg = strtok(line_cpy, delimiters); //take one argument at a time
@@ -104,7 +105,7 @@ void get_label_from_line(char* line, char* label) {
 	char* colon_index = strchr(line_cpy, ':');
 
 	if (colon_index == NULL) {
-		*label = NULL;
+		label = NULL;
 	}
 	else {
 		*colon_index = '\0'; //cut the line in the end of the label
@@ -135,7 +136,6 @@ int get_PC_increment(opcode) {
 void parse_labels(FILE* asm_prog) {
 	char line[MAX_LINE_LEN];
 	char* line_args[MAX_ARGS_IN_LINE];
-	char label[MAX_LABEL_LEN];
 	int opcode;
 
 	
