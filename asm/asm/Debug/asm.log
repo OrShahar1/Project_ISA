@@ -1,15 +1,2 @@
-﻿C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(391,5): warning MSB8028: The intermediate directory (Debug\) contains files shared from another project (Assembler.vcxproj).  This can lead to incorrect clean and rebuild behavior.
-  asm.c
-c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\asm.c(75): warning C4013: 'strchr' undefined; assuming extern returning int
-c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\asm.c(82): warning C4013: 'strcpy' undefined; assuming extern returning int
-c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\asm.c(84): warning C4013: 'strtok' undefined; assuming extern returning int
-c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\asm.c(90): warning C4047: '=': 'char *' differs in levels of indirection from 'int'
-c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\asm.c(75): warning C4047: 'initializing': 'char *' differs in levels of indirection from 'int'
-c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\asm.c(84): warning C4047: 'initializing': 'char *' differs in levels of indirection from 'int'
-c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\asm.c(95): warning C4047: 'initializing': 'char *' differs in levels of indirection from 'int'
-c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\asm.c(106): warning C4047: '=': 'char' differs in levels of indirection from 'void *'
-c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\asm.c(103): warning C4047: 'initializing': 'char *' differs in levels of indirection from 'int'
-c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\asm.c(118): warning C4013: 'strcmp' undefined; assuming extern returning int
-c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\asm.c(137): warning C4101: 'label': unreferenced local variable
-c:\users\דניאל קינדרמן\source\repos\orshahar1\project_isa\assembler\assembler\asm.c(237): warning C4013: 'tolower' undefined; assuming extern returning int
-  Assembler.vcxproj -> C:\Users\דניאל קינדרמן\source\repos\OrShahar1\Project_ISA\Assembler\Debug\asm.exe
+﻿  asm.c
+  asm.vcxproj -> C:\Users\דניאל קינדרמן\source\repos\asm\Debug\asm.exe

@@ -49,14 +49,14 @@ int main(int argc, char** argv) {
 		return 1;
 	};
 
-	FILE* asm_prog = fopen(argv[1], "r"); 
+	FILE* asm_prog = fopen(argv[1], "r");
 	FILE* memin = fopen(argv[2], "w");
 
 	if (asm_prog == NULL || memin == NULL) {
 		printf("Couldn't open files, exiting\n");
 		return 1;
 	};
-	
+
 	parse_labels(asm_prog); //first iteration over the asm program - saving the label addresses.
 	parse_instructions(asm_prog); //second iteration over the asm program - tuering each line into a 32-bit command.
 
@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
 };
 
 void parse_line_into_args(char* line, char* line_args[]) {
-	
+
 	for (int i = 0; i < MAX_ARGS_IN_LINE; i++) { //in case we don't have all 6 args in the line
 		line_args[i] = NULL;
 	};
@@ -138,7 +138,7 @@ void parse_labels(FILE* asm_prog) {
 	char* line_args[MAX_ARGS_IN_LINE];
 	int opcode;
 
-	
+
 	while (fgets(line, MAX_LINE_LEN, asm_prog) != NULL) { //going over all the lines in the file
 		parse_line_into_args(line, line_args);
 		bool has_label = line_has_label(line);
@@ -148,7 +148,8 @@ void parse_labels(FILE* asm_prog) {
 			Labels[label_index].addr = PC;
 			label_index++;
 			opcode = get_opcode_from_line(line_args[1]); //when we have a label the opcode is second
-		} else {
+		}
+		else {
 			opcode = get_opcode_from_line(line_args[0]); //when we don't have a label the opcode is first
 		};
 		PC += get_PC_increment(opcode); //move the program counter, unless it's a word command or NULL
@@ -171,7 +172,7 @@ void parse_instructions(FILE* asm_prog) {
 		};
 		if (line_args[opcode_index] == NULL) continue;
 		opcode = get_opcode_from_line(line_args[opcode_index]);
-		
+
 		if (opcode == 20) { //.word command
 			int address = str_to_int(line_args[opcode_index + 1]);
 			int data = str_to_int(line_args[opcode_index + 2]);
@@ -180,10 +181,9 @@ void parse_instructions(FILE* asm_prog) {
 			if (last_line < address) { last_line = address; }; //update address of the last line written to memory 
 			continue;
 		};
-
-		rd  = get_reg_from_arg(line_args[opcode_index + 1]); //get rd's register number
-		rs  = get_reg_from_arg(line_args[opcode_index + 2]); //get rs's register number
-		rt  = get_reg_from_arg(line_args[opcode_index + 3]); //get rt's register number
+		rd = get_reg_from_arg(line_args[opcode_index + 1]); //get rd's register number
+		rs = get_reg_from_arg(line_args[opcode_index + 2]); //get rs's register number
+		rt = get_reg_from_arg(line_args[opcode_index + 3]); //get rt's register number
 		imm = get_imm_from_arg(line_args[opcode_index + 4]); //get the immediate as a integer, or label's address
 
 		int command = calc_command(opcode, rd, rs, rt, imm); // calculate the 32-bit command from the arguments
@@ -206,7 +206,7 @@ int calc_command(int opcode, int rd, int rs, int rt, int imm) {
 	command += (rd << 20); //bits [24:21]
 	command += (rs << 16); //bits [20:17]
 	command += (rt << 12); //bits [16:13]
-	command += (imm&0x00000fff); //bits [15:0]
+	command += (imm & 0x00000fff); //bits [15:0]
 
 	return command;
 };
@@ -230,7 +230,12 @@ int get_imm_from_arg(char* arg) {
 			return Labels[i].addr;
 		};
 	};
-	return str_to_int(arg); //if we didn't find a matching label - treat the argument as an immediate number
+	if (*arg == '0' && (tolower(*(arg + 1) == 'x'))) {//if we didn't find a matching label - treat the argument as an immediate number
+		return strtol(arg,NULL,0);
+	}
+	else {
+		return atoi(arg);
+	};
 };
 
 void lowercase(char* str) {
@@ -242,9 +247,9 @@ void lowercase(char* str) {
 int str_to_int(char* str) {
 	if (str[0] == '0' && (str[1] == 'x' || str[1] == 'X')) { //str is a hexadecimal number
 		lowercase(str);
-		return strtol(str, NULL, 0); 
+		return strtol(str, NULL, 0);
 	};
-	return strtol(str, NULL, 10); //srt is a decimal number
+	return strtol(str, NULL, 10); //str is a decimal number
 };
 
 
